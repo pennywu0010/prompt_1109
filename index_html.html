@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 AI Prompt 智能寶庫</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter & Noto Sans TC -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans TC', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#0070f3',
+                            600: '#0061d5',
+                            700: '#004eb7',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f4f6f9;
+        }
+        /* 卡片上方紫藍色頂條與外框樣式 */
+        .prompt-card {
+            background: #ffffff;
+            border-radius: 1rem;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: all 0.2s ease-in-out;
+        }
+        .prompt-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #9333ea, #3b82f6);
+        }
+        .prompt-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+        }
+        /* 自訂捲軸 */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="font-sans text-gray-800 antialiased min-h-screen flex flex-col">
+
+    <!-- Toast 訊息通知 -->
+    <div id="toast" class="fixed top-5 right-5 z-50 transform translate-y-[-100px] opacity-0 transition-all duration-300 ease-in-out bg-gray-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center space-x-3 pointer-events-none">
+        <i id="toast-icon" class="fas fa-check-circle text-green-400 text-lg"></i>
+        <span id="toast-msg" class="font-medium text-sm">已成功複製到剪貼簿！</span>
+    </div>
+
+    <!-- 主要內容區 -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- 頁頭標題區 -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 flex items-center justify-center gap-3 tracking-tight">
+                <span>🚀 AI Prompt 智能寶庫</span>
+            </h1>
+            <div class="mt-3 flex items-center justify-center gap-3 text-sm text-gray-500 flex-wrap">
+                <a href="https://docs.google.com/spreadsheets/d/15RVvyVl6uY4wOB9zdCfiDQhDL-1Tt1UN4iDn1_LjnMI/edit?gid=1480282197#gid=1480282197" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-300 transition-all shadow-sm text-xs font-medium">
+                    <i class="fas fa-file-excel text-emerald-600"></i>
+                    <span>開啟原始資料 Google Sheet</span>
+                    <i class="fas fa-external-link-alt text-[10px] text-gray-400"></i>
+                </a>
+                <button onclick="toggleSheetSettings()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 transition-all text-xs font-medium">
+                    <i class="fas fa-sync-alt"></i> 連動試算表 CSV
+                </button>
+            </div>
+
+            <!-- 連動設定彈窗/開關區 -->
+            <div id="sheet-settings" class="hidden mt-4 max-w-xl mx-auto bg-white p-4 rounded-2xl border border-gray-200 shadow-md text-left transition-all">
+                <div class="flex justify-between items-center mb-2">
+                    <h4 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                        <i class="fas fa-plug text-blue-500"></i> Google Sheet 即時動態連動
+                    </h4>
+                    <span id="sync-status" class="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">預設資料庫</span>
+                </div>
+                <p class="text-xs text-gray-500 mb-3">若您已將 Google Sheet「發布至網路」選為 CSV，可直接貼上 CSV 連結自動即時連動：</p>
+                <div class="flex gap-2">
+                    <input type="text" id="csv-url-input" placeholder="貼上 CSV URL (例如：https://docs.google.com/.../pub?output=csv)" 
+                           class="flex-1 text-xs border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <button onclick="fetchGoogleSheetData()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors">
+                        同步資料
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- 搜尋欄 -->
+        <div class="max-w-xl mx-auto mb-6">
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                    <i class="fas fa-search"></i>
+                </div>
+                <input type="text" 
+                       id="search-input" 
+                       oninput="handleSearch()"
+                       placeholder="搜尋提示詞..." 
+                       class="w-full pl-11 pr-10 py-3 bg-white border border-gray-200 rounded-full text-sm text-gray-700 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                <button id="clear-search" onclick="clearSearch()" class="hidden absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times-circle"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 分類標籤區 -->
+        <div class="mb-8">
+            <div id="category-tags" class="flex flex-wrap justify-center gap-2 max-w-4xl mx-auto">
+                <!-- 動態生成的分類按鈕會呈現在此 -->
+            </div>
+        </div>
+
+        <!-- 區塊標題與連動數值統計 -->
+        <div class="flex justify-between items-center mb-6 px-1">
+            <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <span>🧠 AI 協思</span>
+                <span id="prompt-count-badge" class="text-xs bg-blue-100 text-blue-700 font-semibold px-2.5 py-0.5 rounded-full">0 項提示詞</span>
+            </h2>
+            <button onclick="openAddModal()" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded-lg transition-colors shadow-sm">
+                <i class="fas fa-plus"></i> 新增提示詞
+            </button>
+        </div>
+
+        <!-- 提示詞卡片網格 (對照畫面8個卡片) -->
+        <div id="prompt-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- 卡片動態渲染位置 -->
+        </div>
+
+        <!-- 無搜尋結果提示 -->
+        <div id="empty-state" class="hidden text-center py-16 bg-white rounded-2xl border border-dashed border-gray-300 mt-4">
+            <i class="fas fa-folder-open text-4xl text-gray-300 mb-3"></i>
+            <p class="text-gray-500 font-medium">找不到符合條件的提示詞</p>
+            <p class="text-xs text-gray-400 mt-1">請嘗試變更搜尋關鍵字或選擇其他分類標籤</p>
+            <button onclick="resetFilters()" class="mt-4 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium rounded-lg transition-colors">
+                重設篩選條件
+            </button>
+        </div>
+
+    </main>
+
+    <!-- 頁尾 -->
+    <footer class="mt-auto py-6 bg-white border-t border-gray-200 text-center text-xs text-gray-500">
+        <p>🚀 AI Prompt 智能寶庫 &copy; 2026 - 支援動態資料連動與響應式介面</p>
+    </footer>
+
+    <!-- 新增/編輯提示詞 Modal -->
+    <div id="prompt-modal" class="hidden fixed inset-0 z-50 bg-black bg-opacity-40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl transform transition-all">
+            <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
+                <h3 id="modal-title" class="text-lg font-bold text-gray-800">新增提示詞</h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-lg">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="prompt-form" onsubmit="handleFormSubmit(event)" class="space-y-4">
+                <input type="hidden" id="form-id">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">分類標籤</label>
+                    <input type="text" id="form-category" required placeholder="例如：內容創作、筆記精煉" class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">提示詞名稱 (標題)</label>
+                    <input type="text" id="form-title" required placeholder="例如：意義單詞、品牌名稱" class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">提示詞內容 (Prompt)</label>
+                    <textarea id="form-content" required rows="6" placeholder="請輸入詳細的 Prompt 指令..." class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none custom-scrollbar"></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors">取消</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors">儲存並連動更新</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 邏輯腳本 -->
+    <script>
+        // 依照試算表與圖片精準建立初始 prompt 資料
+        const initialPrompts = [
+            {
+                id: 1,
+                category: "內容創作",
+                title: "意義單詞",
+                content: "將文章的重點部分，尋找一個代表性英文字母，並使這些字母的首字組合成一個具有意義的單詞 (如「VISION」)"
+            },
+            {
+                id: 2,
+                category: "內容創作",
+                title: "品牌名稱",
+                content: "完成 ChatGPT 角色定義後，依據'品牌定義'與'產品介紹'發想5個產品名稱與標題 (口號)。\n- 提示詞指令：描述品牌與產品，請列出數字 個產品名稱與行銷標題建議。(*品牌定義*描述、*產品介紹*描述)\n- Prompt\n  - 我推出一個運動鞋品牌，今年會銷售一款新型跑步鞋..."
+            },
+            {
+                id: 3,
+                category: "筆記精煉",
+                title: "長篇文章",
+                content: "為這篇長篇文章，進行以下四個步驟，每一個步驟都提供給文章與標示出來\n第1、請為這篇文章生成一份簡短摘要。\n第2、請基於上一個摘要，不要遺漏任何專有名詞、數字或關鍵人物，重新生成一份摘要。\n第3、現在，請將摘要中每一句話都濃縮成更簡潔的表達，同時保留精髓。"
+            },
+            {
+                id: 4,
+                category: "筆記精煉",
+                title: "書籍精煉",
+                content: "請對 @[檔名]\n啟動【終極煉金管線】，一次執行四步驟整合：\n第一步：全域架構導航 (Stage 01) 執行 stage-1-navigator，對精煉稿進行深度掃描，產出知識地圖與反直覺預警。\n存檔：01_Map_[主題簡稱].md。\n第二步：價值 DNA 診斷 (Stage 02)"
+            },
+            {
+                id: 5,
+                category: "筆記精煉",
+                title: "書籍精煉",
+                content: "我剛讀完了關於 [填入具體段落標題] 的內容。現在請幫我進行深度研磨：\n\n1-底層邏輯持續提問：針對這段內容的「運作原理」向我提問，測試我是否理解了「為什麼有效」，而非只是記住步驟。\n\n2-隱喻轉化：如果這段概念有梅..."
+            },
+            {
+                id: 6,
+                category: "筆記精煉",
+                title: "提取練習",
+                content: "我剛讀完了關於 [填入具體段落標題] 的內容。現在請幫我進行深度研磨：\n\n1-底層邏輯持續提問：針對這段內容的「運作原理」向我提問，測試我是否理解了「為什麼有效」，而非只是記住步驟。\n\n2-隱喻轉化：如果這段概念有梅..."
+            },
+            {
+                id: 7,
+                category: "內容創作",
+                title: "影片清理",
+                content: "你的角色是一位「逐字稿校對員」，不是編輯。\n任務：\n1-僅刪除口語填充詞、重複說法、明顯贅詞\n2-不得改寫句型、不得改變原意、不得加入新解釋\n規則：\n1-原句順序必須完全一致\n2-若刪除任何詞語，需確保前後文順暢..."
+            },
+            {
+                id: 8,
+                category: "內容創作",
+                title: "影片清理",
+                content: "你的角色是一位「內容結構化整理員」，不是編輯、不是評論者。\n\n我會提供一段約 4000 字的影片逐字稿內容，請你在完全保留原作者語意與立場的前提下，\n進行「保留語意的濃縮」，將內容壓縮至 約 2000 字。全文用繁體中文呈現。"
+            }
+        ];
+
+        // 全域狀態
+        let prompts = [...initialPrompts];
+        let currentCategory = "全部";
+        let searchQuery = "";
+
+        // 初始化
+        window.onload = function() {
+            renderCategories();
+            renderPrompts();
+        };
+
+        // 取得分類標籤列表
+        function getCategories() {
+            const categories = ["全部", ...new Set(prompts.map(p => p.category))];
+            // 補充圖片中顯示的所有分類按鈕
+            const fixedTags = ["內容創作", "筆記精煉", "程式應用", "簡報表達", "程式生成", "文本優化", "生文校正", "專案企劃", "圖片生成", "筆記整理", "資訊整理", "心智圖法"];
+            fixedTags.forEach(tag => {
+                if (!categories.includes(tag)) {
+                    categories.push(tag);
+                }
+            });
+            return categories;
+        }
+
+        // 渲染分類按鈕
+        function renderCategories() {
+            const container = document.getElementById('category-tags');
+            const categories = getCategories();
+
+            container.innerHTML = categories.map(cat => {
+                const isActive = currentCategory === cat;
+                const activeClass = isActive 
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-200 font-semibold" 
+                    : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200 font-medium";
+                
+                return `
+                    <button onclick="selectCategory('${cat}')" 
+                            class="px-4 py-1.5 rounded-full text-xs transition-all duration-200 cursor-pointer ${activeClass}">
+                        ${cat}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        // 標籤切換
+        function selectCategory(category) {
+            currentCategory = category;
+            renderCategories();
+            renderPrompts();
+        }
+
+        // 搜尋過濾
+        function handleSearch() {
+            const input = document.getElementById('search-input');
+            const clearBtn = document.getElementById('clear-search');
+            searchQuery = input.value.trim().toLowerCase();
+
+            if (searchQuery.length > 0) {
+                clearBtn.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+            }
+            renderPrompts();
+        }
+
+        function clearSearch() {
+            document.getElementById('search-input').value = '';
+            handleSearch();
+        }
+
+        function resetFilters() {
+            currentCategory = "全部";
+            document.getElementById('search-input').value = '';
+            searchQuery = "";
+            document.getElementById('clear-search').classList.add('hidden');
+            renderCategories();
+            renderPrompts();
+        }
+
+        // 渲染提示詞卡片與連動數值更新
+        function renderPrompts() {
+            const grid = document.getElementById('prompt-grid');
+            const emptyState = document.getElementById('empty-state');
+            const badge = document.getElementById('prompt-count-badge');
+
+            // 條件過濾：分類 + 關鍵字
+            const filtered = prompts.filter(item => {
+                const matchCategory = currentCategory === "全部" || item.category === currentCategory;
+                const matchSearch = !searchQuery || 
+                    item.title.toLowerCase().includes(searchQuery) || 
+                    item.content.toLowerCase().includes(searchQuery) ||
+                    item.category.toLowerCase().includes(searchQuery);
+                return matchCategory && matchSearch;
+            });
+
+            // 即時數值連動
+            badge.textContent = `${filtered.length} 項提示詞`;
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            grid.innerHTML = filtered.map(item => `
+                <div class="prompt-card p-5">
+                    <div>
+                        <!-- 類別標籤 -->
+                        <div class="mb-3">
+                            <span class="inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-600 border border-blue-100">
+                                ${escapeHtml(item.category)}
+                            </span>
+                        </div>
+
+                        <!-- 標題與編輯按鈕 -->
+                        <h3 class="text-base font-bold text-gray-800 mb-3 flex items-center justify-between">
+                            <span>${escapeHtml(item.title)}</span>
+                            <div class="flex items-center gap-1">
+                                <button onclick="openEditModal(${item.id})" class="text-xs text-gray-400 hover:text-blue-600 p-1" title="編輯">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="deletePrompt(${item.id})" class="text-xs text-gray-400 hover:text-red-500 p-1" title="刪除">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </h3>
+
+                        <!-- 提示詞內容視窗 (滾動條) -->
+                        <div class="bg-gray-50 border border-gray-100 rounded-xl p-3 mb-4 h-44 overflow-y-auto custom-scrollbar text-xs text-gray-600 leading-relaxed whitespace-pre-wrap">
+                            ${escapeHtml(item.content)}
+                        </div>
+                    </div>
+
+                    <!-- 複製 Prompt 按鈕 -->
+                    <button onclick="copyPrompt('${encodeURIComponent(item.content)}')" 
+                            class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold rounded-lg shadow-sm hover:shadow transition-all duration-150 flex items-center justify-center gap-2">
+                        <i class="far fa-copy"></i>
+                        <span>複製 Prompt</span>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // 一鍵複製機制 (含 fallback)
+        function copyPrompt(encodedText) {
+            const text = decodeURIComponent(encodedText);
+            
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast("複製成功！提示詞已存至剪貼簿");
+                }).catch(() => {
+                    fallbackCopy(text);
+                });
+            } else {
+                fallbackCopy(text);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showToast("複製成功！提示詞已存至剪貼簿");
+            } catch (err) {
+                showToast("複製失敗，請手動複製", true);
+            }
+            document.body.removeChild(textArea);
+        }
+
+        // Toast 訊息提示
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-msg');
+            const toastIcon = document.getElementById('toast-icon');
+
+            toastMsg.textContent = message;
+            toastIcon.className = isError 
+                ? "fas fa-exclamation-circle text-red-400 text-lg" 
+                : "fas fa-check-circle text-green-400 text-lg";
+
+            toast.classList.remove('translate-y-[-100px]', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-[-100px]', 'opacity-0');
+            }, 2500);
+        }
+
+        function toggleSheetSettings() {
+            const el = document.getElementById('sheet-settings');
+            el.classList.toggle('hidden');
+        }
+
+        // 讀取並同步 CSV 資料
+        function fetchGoogleSheetData() {
+            const urlInput = document.getElementById('csv-url-input').value.trim();
+            if (!urlInput) {
+                showToast("請輸入正確的 CSV 連結", true);
+                return;
+            }
+
+            const statusEl = document.getElementById('sync-status');
+            statusEl.textContent = "連線讀取中...";
+            statusEl.className = "text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-700 font-medium";
+
+            fetch(urlInput)
+                .then(response => {
+                    if (!response.ok) throw new Error("網路連線失敗");
+                    return response.text();
+                })
+                .then(csvText => {
+                    const parsedData = parseCSV(csvText);
+                    if (parsedData.length > 0) {
+                        prompts = parsedData;
+                        renderCategories();
+                        renderPrompts();
+                        statusEl.textContent = "即時連動中";
+                        statusEl.className = "text-xs px-2 py-0.5 rounded bg-green-100 text-green-700 font-medium";
+                        showToast(`已成功同步 ${parsedData.length} 筆試算表資料！`);
+                    } else {
+                        throw new Error("CSV 資料格式有誤或無內容");
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    statusEl.textContent = "同步失敗";
+                    statusEl.className = "text-xs px-2 py-0.5 rounded bg-red-100 text-red-700 font-medium";
+                    showToast("同步失敗，請確認 Sheet 已發布為 CSV", true);
+                });
+        }
+
+        // CSV 字串解析
+        function parseCSV(text) {
+            const lines = text.split('\n');
+            const result = [];
+            let id = 1;
+
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                
+                const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                if (parts.length >= 2) {
+                    const category = parts[0] ? parts[0].replace(/^"|"$/g, '').trim() : "一般";
+                    const title = parts[1] ? parts[1].replace(/^"|"$/g, '').trim() : "未命名";
+                    const content = parts[2] ? parts[2].replace(/^"|"$/g, '').trim().replace(/\\n/g, '\n') : title;
+                    
+                    result.push({ id: id++, category, title, content });
+                }
+            }
+            return result;
+        }
+
+        // Modal 操作
+        function openAddModal() {
+            document.getElementById('modal-title').textContent = "新增提示詞";
+            document.getElementById('form-id').value = "";
+            document.getElementById('form-category').value = currentCategory !== "全部" ? currentCategory : "內容創作";
+            document.getElementById('form-title').value = "";
+            document.getElementById('form-content').value = "";
+            document.getElementById('prompt-modal').classList.remove('hidden');
+        }
+
+        function openEditModal(id) {
+            const item = prompts.find(p => p.id === id);
+            if (!item) return;
+            document.getElementById('modal-title').textContent = "編輯提示詞";
+            document.getElementById('form-id').value = item.id;
+            document.getElementById('form-category').value = item.category;
+            document.getElementById('form-title').value = item.title;
+            document.getElementById('form-content').value = item.content;
+            document.getElementById('prompt-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('prompt-modal').classList.add('hidden');
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            const id = document.getElementById('form-id').value;
+            const category = document.getElementById('form-category').value.trim();
+            const title = document.getElementById('form-title').value.trim();
+            const content = document.getElementById('form-content').value.trim();
+
+            if (id) {
+                const index = prompts.findIndex(p => p.id === parseInt(id));
+                if (index !== -1) {
+                    prompts[index] = { id: parseInt(id), category, title, content };
+                    showToast("提示詞已連動更新！");
+                }
+            } else {
+                const newId = prompts.length ? Math.max(...prompts.map(p => p.id)) + 1 : 1;
+                prompts.unshift({ id: newId, category, title, content });
+                showToast("已新增提示詞並即時呈現！");
+            }
+
+            closeModal();
+            renderCategories();
+            renderPrompts();
+        }
+
+        function deletePrompt(id) {
+            if (confirm("確定要刪除這筆提示詞嗎？")) {
+                prompts = prompts.filter(p => p.id !== id);
+                renderCategories();
+                renderPrompts();
+                showToast("已成功刪除提示詞");
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
